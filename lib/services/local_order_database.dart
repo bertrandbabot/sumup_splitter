@@ -38,6 +38,8 @@ class LocalOrderDatabase {
               "ALTER TABLE orders ADD COLUMN receipt_no TEXT NOT NULL DEFAULT ''");
           await _safeAlter(db,
               "ALTER TABLE orders ADD COLUMN payment_type TEXT NOT NULL DEFAULT ''");
+          await _safeAlter(db,
+              "ALTER TABLE orders ADD COLUMN user TEXT NOT NULL DEFAULT ''");
         }
       },
     );
@@ -106,6 +108,6 @@ class LocalOrderDatabase {
             .whereType<Map<String, dynamic>>()
             .map(SumupReceiptItem.fromJson)
             .toList(),
-        user: row['user'] as String);
+        user: row['user']?.toString() ?? '');
   }
 }

@@ -50,9 +50,6 @@ class WatcherService {
         apiKey: settings.apiKey,
         merchantCode: settings.merchantCode,
       );
-      final printer =
-          PrinterService(ip: settings.printerIp, port: settings.printerPort);
-
       print('[WATCHER] Récupération des transactions SumUp...');
       final transactions = await sumup.getRecentTransactions(limit: 10);
       transactions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -84,8 +81,15 @@ class WatcherService {
           continue;
         }
 
+        final target = settings.printerForUser(tx.user);
+        final printer = PrinterService(
+          ip: target.ip,
+          port: target.port,
+          label: target.label,
+        );
+
         print(
-            '[WATCHER] Impression de ${products.length} ligne(s) produit(s)...');
+            '[WATCHER] Impression de ${products.length} ligne(s) produit(s) sur ${target.ip} (user=${tx.user}, label=${target.label})...');
         await printer.printOneTicketPerItem(products, tx);
 
         await db.upsertOrder(

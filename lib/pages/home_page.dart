@@ -190,9 +190,11 @@ class _HomePageState extends State<HomePage> {
     }
 
     try {
+      final target = currentSettings.printerForUser(order.user);
       await PrinterService(
-        ip: currentSettings.printerIp,
-        port: currentSettings.printerPort,
+        ip: target.ip,
+        port: target.port,
+        label: target.label,
       ).printOneTicketPerItem(
         order.items,
         SumupTransaction(
@@ -340,9 +342,15 @@ class _HomePageState extends State<HomePage> {
                     itemCount: printedOrders.length,
                     itemBuilder: (context, index) {
                       final order = printedOrders[index];
+                      final printer =
+                          settings!.printerForUser(order.user);
+                      final printerIndex =
+                          settings!.printers.indexOf(printer);
 
                       return OrderCard(
                         order: order,
+                        label: printer.label,
+                        tileColor: OrderCard.colorForPrinterIndex(printerIndex),
                         onReprint: () => _reprint(order),
                       );
                     },

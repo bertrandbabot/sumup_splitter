@@ -1,16 +1,19 @@
 import 'dart:io';
-import 'package:charset_converter/charset_converter.dart';
+
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:sumup_ticket_splitter/models/sumup_transaction.dart';
+
 import '../models/sumup_receipt_item.dart';
 
 class PrinterService {
   final String ip;
   final int port;
+  final String label;
 
   const PrinterService({
     required this.ip,
     this.port = 9100,
+    this.label = '',
   });
 
   Future<void> testPrint() async {
@@ -28,6 +31,12 @@ class PrinterService {
         width: PosTextSize.size2,
       ),
     ));
+    if (label.trim().isNotEmpty) {
+      bytes.addAll(generator.text(
+        label.trim(),
+        styles: const PosStyles(align: PosAlign.right),
+      ));
+    }
     bytes.addAll(generator.feed(2));
     bytes.addAll(generator.cut(mode: PosCutMode.full));
 
@@ -44,29 +53,34 @@ class PrinterService {
         final bytes = <int>[];
         bytes.addAll(generator.reset());
         bytes.addAll(generator.setGlobalCodeTable('CP1252'));
-        if (tx.user == "support@infonetik.fr") {
-          bytes.addAll(generator.text(
-            "${tx.timestamp}                      1",
+
+        final headerColumns = <PosColumn>[
+          PosColumn(
+            text: tx.timestamp.toString(),
+            width: label.trim().isNotEmpty ? 8 : 12,
             containsChinese: false,
             styles: const PosStyles(
-              align: PosAlign.center,
-              bold: false,
+              align: PosAlign.left,
               height: PosTextSize.size1,
               width: PosTextSize.size1,
             ),
-          ));
-        } else {
-          bytes.addAll(generator.text(
-            "${tx.timestamp}                      2",
-            containsChinese: false,
-            styles: const PosStyles(
-              align: PosAlign.center,
-              bold: false,
-              height: PosTextSize.size1,
-              width: PosTextSize.size1,
+          ),
+        ];
+        if (label.trim().isNotEmpty) {
+          headerColumns.add(
+            PosColumn(
+              text: label.trim(),
+              width: 4,
+              containsChinese: false,
+              styles: const PosStyles(
+                align: PosAlign.right,
+                height: PosTextSize.size1,
+                width: PosTextSize.size1,
+              ),
             ),
-          ));
+          );
         }
+        bytes.addAll(generator.row(headerColumns));
 
         bytes.addAll(generator.feed(1));
         bytes.addAll(generator.text(
@@ -83,7 +97,7 @@ class PrinterService {
             generator.qrcode(tx.id + tx.timestamp.toString() + i.toString()));
         bytes.addAll(generator.feed(1));
         bytes.addAll(generator.text(
-          "Marche Gourmande",
+          'Marche Gourmande',
           containsChinese: false,
           styles: const PosStyles(
             align: PosAlign.center,
@@ -95,7 +109,7 @@ class PrinterService {
         ));
 
         bytes.addAll(generator.text(
-          "Merci pour votre confiance",
+          'Merci pour votre confiance',
           containsChinese: false,
           styles: const PosStyles(
             align: PosAlign.center,
