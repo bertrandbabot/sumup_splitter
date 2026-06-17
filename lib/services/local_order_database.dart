@@ -15,7 +15,7 @@ class LocalOrderDatabase {
 
     _db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE orders (
@@ -28,7 +28,8 @@ class LocalOrderDatabase {
             amount REAL NOT NULL,
             currency TEXT NOT NULL,
             items_json TEXT NOT NULL,
-            user TEXT NOT NULL
+            user TEXT NOT NULL,
+            printer_index INTEGER NOT NULL DEFAULT 0
           )
         ''');
       },
@@ -40,6 +41,10 @@ class LocalOrderDatabase {
               "ALTER TABLE orders ADD COLUMN payment_type TEXT NOT NULL DEFAULT ''");
           await _safeAlter(db,
               "ALTER TABLE orders ADD COLUMN user TEXT NOT NULL DEFAULT ''");
+        }
+        if (oldVersion < 3) {
+          await _safeAlter(db,
+              'ALTER TABLE orders ADD COLUMN printer_index INTEGER NOT NULL DEFAULT 0');
         }
       },
     );
@@ -70,6 +75,7 @@ class LocalOrderDatabase {
         'currency': order.currency,
         'items_json': jsonEncode(order.items.map((e) => e.toJson()).toList()),
         'user': order.user,
+        'printer_index': order.printerIndex,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -108,6 +114,7 @@ class LocalOrderDatabase {
             .whereType<Map<String, dynamic>>()
             .map(SumupReceiptItem.fromJson)
             .toList(),
-        user: row['user']?.toString() ?? '');
+        user: row['user']?.toString() ?? '',
+        printerIndex: row['printer_index'] as int? ?? 0);
   }
 }

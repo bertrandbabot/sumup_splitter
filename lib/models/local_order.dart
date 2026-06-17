@@ -11,6 +11,7 @@ class LocalOrder {
   final String currency;
   final List<SumupReceiptItem> items;
   final String user;
+  final int printerIndex;
 
   const LocalOrder({
     required this.id,
@@ -23,6 +24,7 @@ class LocalOrder {
     required this.currency,
     required this.items,
     required this.user,
+    this.printerIndex = 0,
   });
 
   bool get isPrinted => status == 'printed';

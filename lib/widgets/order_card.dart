@@ -7,6 +7,7 @@ class OrderCard extends StatelessWidget {
   final LocalOrder order;
   final String label;
   final Color tileColor;
+  final bool compact;
   final VoidCallback onReprint;
 
   const OrderCard({
@@ -14,6 +15,7 @@ class OrderCard extends StatelessWidget {
     required this.order,
     required this.label,
     required this.tileColor,
+    this.compact = false,
     required this.onReprint,
   });
 
@@ -42,40 +44,59 @@ class OrderCard extends StatelessWidget {
         label.trim().isNotEmpty ? label.trim() : order.user.trim();
 
     return Card(
+      margin: compact ? EdgeInsets.zero : null,
       child: ListTile(
         tileColor: tileColor,
-        title: Row(
-          children: [
-            if (displayLabel.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text(
-                    displayLabel,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-            Expanded(
-              child: Text(
+        title: compact
+            ? Text(
                 itemText.isEmpty
                     ? 'Commande ${order.transactionCode}'
                     : itemText,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              )
+            : Row(
+                children: [
+                  if (displayLabel.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Chip(
+                        label: Text(
+                          displayLabel,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      itemText.isEmpty
+                          ? 'Commande ${order.transactionCode}'
+                          : itemText,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
         subtitle: Text(
-          '$date • ${order.amount.toStringAsFixed(2)} ${order.currency}$payment$receipt\n${order.transactionCode}',
+          compact
+              ? '$date • ${order.amount.toStringAsFixed(2)} ${order.currency}'
+              : '$date • ${order.amount.toStringAsFixed(2)} ${order.currency}$payment$receipt\n${order.transactionCode}',
+          maxLines: compact ? 2 : null,
+          overflow: compact ? TextOverflow.ellipsis : null,
         ),
-        isThreeLine: true,
-        trailing: ElevatedButton.icon(
-          onPressed: onReprint,
-          icon: const Icon(Icons.print),
-          label: const Text('Réimprimer'),
-        ),
+        isThreeLine: !compact,
+        trailing: compact
+            ? IconButton(
+                onPressed: onReprint,
+                icon: const Icon(Icons.print),
+                tooltip: 'Réimprimer',
+              )
+            : ElevatedButton.icon(
+                onPressed: onReprint,
+                icon: const Icon(Icons.print),
+                label: const Text('Réimprimer'),
+              ),
       ),
     );
   }

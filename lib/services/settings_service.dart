@@ -19,14 +19,17 @@ class AppSettings {
 
   PrinterConfig get defaultPrinter => printers.first;
 
-  PrinterConfig printerForUser(String txUser) {
-    for (final printer in printers) {
-      if (printer.isConfigured && printer.matchesUser(txUser)) {
-        return printer;
+  int printerIndexForUser(String txUser) {
+    for (var i = 0; i < printers.length; i++) {
+      if (printers[i].isConfigured && printers[i].matchesUser(txUser)) {
+        return i;
       }
     }
-    return defaultPrinter;
+    return 0;
   }
+
+  PrinterConfig printerForUser(String txUser) =>
+      printers[printerIndexForUser(txUser)];
 
   bool get isConfigured =>
       apiKey.trim().isNotEmpty &&

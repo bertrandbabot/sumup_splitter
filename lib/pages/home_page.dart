@@ -7,7 +7,7 @@ import '../services/local_order_database.dart';
 import '../services/printer_service.dart';
 import '../services/settings_service.dart';
 import '../services/watcher_service.dart';
-import '../widgets/order_card.dart';
+import '../widgets/printer_orders_column.dart';
 import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -190,7 +190,11 @@ class _HomePageState extends State<HomePage> {
     }
 
     try {
-      final target = currentSettings.printerForUser(order.user);
+      final printerIndex = order.printerIndex.clamp(
+        0,
+        AppSettings.maxPrinters - 1,
+      );
+      final target = currentSettings.printers[printerIndex];
       await PrinterService(
         ip: target.ip,
         port: target.port,
@@ -231,9 +235,45 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _clearHistory() async {
-    await db.deleteAll();
+    final currentSettings = settings;
+
+    try {
+      if (currentSettings != null && currentSettings.isConfigured) {
+        await watcher.resetHistory(currentSettings);
+      } else {
+        await db.deleteAll();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              currentSettings != null && currentSettings.isConfigured
+                  ? 'Historique vidé. Les ${WatcherService.historyLimit} dernières transactions ne seront pas réimprimées.'
+                  : 'Historique vidé.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Erreur lors du vidage de l\'historique: $e',
+            ),
+          ),
+        );
+      }
+    }
 
     await _loadOrders();
+  }
+
+  List<LocalOrder> _ordersForPrinter(int printerIndex) {
+    return orders
+        .where((o) => o.isPrinted && o.printerIndex == printerIndex)
+        .toList();
   }
 
   @override
@@ -246,7 +286,7 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    final printedOrders = orders.where((o) => o.isPrinted).toList();
+    final currentSettings = settings!;
 
     return Scaffold(
       appBar: AppBar(
@@ -331,30 +371,23 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Expanded(
-            child: printedOrders.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Aucune commande traitée',
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < AppSettings.maxPrinters; i++)
+                    Expanded(
+                      child: PrinterOrdersColumn(
+                        printerIndex: i,
+                        printer: currentSettings.printers[i],
+                        orders: _ordersForPrinter(i),
+                        onReprint: _reprint,
+                      ),
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: printedOrders.length,
-                    itemBuilder: (context, index) {
-                      final order = printedOrders[index];
-                      final printer =
-                          settings!.printerForUser(order.user);
-                      final printerIndex =
-                          settings!.printers.indexOf(printer);
-
-                      return OrderCard(
-                        order: order,
-                        label: printer.label,
-                        tileColor: OrderCard.colorForPrinterIndex(printerIndex),
-                        onReprint: () => _reprint(order),
-                      );
-                    },
-                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
